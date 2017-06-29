@@ -1,10 +1,25 @@
+#' Creates a manhattan plot
+#' @param x A data frame with result data
+#' @param SNP SNP column in data frame
+#' @param CHR Chromosome column in data frame
+#' @param BP SNP position column in data frame
+#' @param P P-value column in data frame
+#' @param build What build to use for plotting (default to 'b37')
+#' @param highlight Whether to highlight SNPs (default to FALSE)
+#' @param highlight.col Vector containing SNPs to label
+#' @param title Title of plot
+#' 
+#' @return A manhattan plot (ggplot2 object)
+#' 
+#' @import ggplot2
+#' @import ggrepel
+#' 
+#' @export
+
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("data.table", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-library(ggplot2)
-library(data.table)
-library(ggrepel)
 #res <- fread('/home/oyvind/Documents/manhattan-tool/prunedman', header = T, stringsAsFactors = F, data.table = F)
 #hl <- c('rs72921490','rs4478530')
 manh <- function(x, SNP='SNP', CHR='CHR', BP='BP', P='P', 
