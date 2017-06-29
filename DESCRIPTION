@@ -1,4 +1,4 @@
-Package: gwasplots
+Package: qqman2
 Title: Plots for GWAS
 Version: 0.1
 Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
