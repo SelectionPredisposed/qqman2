@@ -3,9 +3,8 @@ Title: Plots for GWAS
 Version: 0.1
 Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
 Description: Provides plotting functions related to GWA studies
-Depends: R (>= 3.4.0)
+Depends: R (>= 3.4.0), ggplot2, data.table, ggrepel
 License: MIT
 Encoding: UTF-8
 LazyData: true
-Imports: ggplot2, data.table, ggrepel
 RoxygenNote: 6.0.1.9000
