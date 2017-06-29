@@ -2,9 +2,9 @@
 #devtools::use_package("data.table", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-#library(ggplot2)
-#library(data.table)
-#library(ggrepel)
+library(ggplot2)
+library(data.table)
+library(ggrepel)
 #res <- fread('/home/oyvind/Documents/manhattan-tool/prunedman', header = T, stringsAsFactors = F, data.table = F)
 #hl <- c('rs72921490','rs4478530')
 manh <- function(x, SNP='SNP', CHR='CHR', BP='BP', P='P', 
