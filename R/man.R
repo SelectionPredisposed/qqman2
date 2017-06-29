@@ -1,6 +1,6 @@
-devtools::use_package("ggplot2", "Suggests")
-devtools::use_package("data.table", "Suggests")
-devtools::use_package("ggrepel", "Suggests")
+#devtools::use_package("ggplot2", "Suggests")
+#devtools::use_package("data.table", "Suggests")
+#devtools::use_package("ggrepel", "Suggests")
 
 #library(ggplot2)
 #library(data.table)
@@ -53,7 +53,7 @@ manh <- function(x, SNP='SNP', CHR='CHR', BP='BP', P='P',
 
   # Create manhattan plot
   
-  manhattanPlot <- ggplot()
+  manhattanPlot <- ggplot2::ggplot()
   manhattanPlot <- manhattanPlot + geom_point(aes(x = manhattanData$x, y = -log10(manhattanData[[P]]), col = manhattanData$col))
   manhattanPlot <- manhattanPlot + scale_color_manual(values = c("slategray4", "midnightblue"))
   
@@ -71,7 +71,7 @@ manh <- function(x, SNP='SNP', CHR='CHR', BP='BP', P='P',
   
   # Add labels to plot if specified
   if(highlight==T) {
-    manhattanPlot <-manhattanPlot + geom_text_repel(data= subset(manhattanData, get(SNP) %in% highlight.snps), aes(x = x, y = -log10(get(P)), label=get(highlight.col)))
+    manhattanPlot <-manhattanPlot + ggrepel::geom_text_repel(data= subset(manhattanData, get(SNP) %in% highlight.snps), aes(x = x, y = -log10(get(P)), label=get(highlight.col)))
   }
   
   # Add title to plot (uses system time if none in specified)
