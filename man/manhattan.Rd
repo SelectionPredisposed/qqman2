@@ -2,7 +2,7 @@
 % Please edit documentation in R/manhattan.R
 \name{manhattan}
 \alias{manhattan}
-\title{Creates a manhattan plot.}
+\title{Creates a manhattan plot using ggplot2 and returns the plot object.}
 \usage{
 manhattan(x, snp = "SNP", chr = "CHR", bp = "BP", p = "P",
   maf = "MAF", typed = NA, annotation = NA, thresholdLow = 5,
@@ -40,14 +40,10 @@ manhattan(x, snp = "SNP", chr = "CHR", bp = "BP", p = "P",
 \item{title}{Title of plot (date by default, ignored if NA)}
 
 \item{pb}{SNP position column in data frame}
-
-\item{highlight}{Whether to highlight SNPs (default to FALSE)}
-
-\item{highlight.col}{Vector containing SNPs to label}
 }
 \value{
 A manhattan plot (ggplot2 object)
 }
 \description{
-Creates a manhattan plot.
+Creates a manhattan plot using ggplot2 and returns the plot object.
 }

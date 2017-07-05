@@ -1,4 +1,4 @@
-#' Creates a manhattan plot.
+#' Creates a manhattan plot using ggplot2 and returns the plot object.
 #' 
 #' @param x A data frame with result data
 #' @param snp SNP column in data frame
@@ -14,8 +14,6 @@
 #' @param thresholdHighColor the color of the high threshold
 #' @param mafColor the color of the low maf values
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
-#' @param highlight Whether to highlight SNPs (default to FALSE)
-#' @param highlight.col Vector containing SNPs to label
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
 #' @return A manhattan plot (ggplot2 object)
