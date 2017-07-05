@@ -26,14 +26,11 @@
 #' @export
 
 #devtools::use_package("ggplot2", "Suggests")
-#devtools::use_package("data.table", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-#res <- fread('/home/oyvind/Documents/manhattan-tool/prunedman', header = T, stringsAsFactors = F, data.table = F)
-#hl <- c('rs72921490','rs4478530')
 manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', typed=NA, annotation=NA, 
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black",
-                 build='b37', title=Sys.time()){
+                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", 
+                      thresholdHighColor = "red", mafColor = "black", build='b37', title=Sys.time()){
   
   
   # Build specific variables
@@ -51,11 +48,14 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   
   # Make a data frame for the plot
   
-  manhattanData <- x
-  
-  
-  # Take the log of the p-values
-  manhattanData$logP <- -log10(x[[p]])
+  manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], maf = x[[maf]], stringsAsFactors = F)
+  manhattanData$logP <- -log10(manhattanData$p)
+  if (!is.na(typed)) {
+    manhattanData$typed <- x[[typed]]
+  }
+  if (!is.na(annotation)) {
+    manhattanData$annotation <- x[[annotation]]
+  }
   
   
   # create vectors for horizontal annotation
@@ -73,7 +73,7 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   xOffset <- 0
   start <- T
   for (chr in 1:22) {
-    bpTemp <- manhattanData[[bp]][manhattanData[[chr]] == chr]
+    bpTemp <- manhattanData$bp[manhattanData$chr == chr]
     xTemp <- bpTemp + xOffset
     breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
     xBreak <- c(xBreak, breakValue)
@@ -96,7 +96,7 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   
   # Order by maf to see common markers in front
   
-  manhattanData <- manhattanData[order(manhattanData[[maf]]), ]
+  manhattanData <- manhattanData[order(manhattanData$maf), ]
   
   
   # Make a ggplot object
@@ -111,12 +111,12 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   
   # Plot all markers
   
-  if (is.na(typed)) {
-    typed <- 1.5
-  } else {
+  if (!is.na(typed)) {
+    manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed), col = "black", shape = 21)
     manhattanPlot <- manhattanPlot + scale_size_manual(name = "", values = c(2, 1))
+  } else {
+    manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf), col = "black", shape = 21)
   }
-  manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed), col = "black", shape = 21)
   manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "Maf", colors = c("white", mafColor))
   
   
@@ -143,7 +143,7 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   # Add annotation if provided
   
   if (!is.na(annotation)) {
-    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData[[annotation]]), ], aes(x = x, y = logP, label=annotation))
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData$annotation), ], aes(x = x, y = logP, label=annotation))
   }
   
   # Add title to plot if provided
@@ -155,7 +155,5 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   # Return the plot
   
   return(manhattanPlot)
-} 
+}
 
-#manh(res,SNP = 'rsid', CHR = 'chromosome',BP = 'position',P = 'frequentist_add_pvalue', highlight = T, highlight.col = 'position', highlight.snps = hl)
-#manh(res,SNP = 'rsid', CHR = 'chromosome',BP = 'position',P = 'frequentist_add_pvalue')
