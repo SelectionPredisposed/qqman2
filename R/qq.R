@@ -7,7 +7,6 @@
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
-#' @param mafColor the color of the low maf values
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
 #' @return A qq plot (ggplot2 object)
@@ -19,8 +18,8 @@
 #devtools::use_package("ggplot2", "Suggests")
 
 qq <- function(x, p='P', maf = 'MAF', typed=NA, 
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", 
-                      thresholdHighColor = "red", mafColor = "black", title=Sys.time()){
+                      thresholdLow = 5, thresholdHigh = -log10(5e-8), 
+               thresholdLowColor = "blue", thresholdHighColor = "red", title=Sys.time()){
   
   # Make a data frame for the plot
   
