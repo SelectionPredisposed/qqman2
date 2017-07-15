@@ -17,7 +17,7 @@
 
 #devtools::use_package("ggplot2", "Suggests")
 
-qq <- function(x, p='P', maf = 'MAF', typed=NA, 
+qq <- function(x, p='P', maf = 'MAF', typed = NA, 
                       thresholdLow = 5, thresholdHigh = -log10(5e-8), 
                thresholdLowColor = "blue", thresholdHighColor = "red", title=Sys.time()){
   

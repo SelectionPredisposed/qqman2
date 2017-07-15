@@ -4,7 +4,8 @@
 #' @param snp SNP column in data frame
 #' @param chr Chromosome column in data frame
 #' @param pb SNP position column in data frame
-#' @param maf MAF column in data frame
+#' @param maf MAF column in data frame (ignored if NA)
+#' @param categories the column in the data frame indicating the markers categories (ignored if NA)
 #' @param p P-value column in data frame
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
 #' @param annotation a vector of annotation (ignored if NA)
@@ -13,6 +14,7 @@
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
 #' @param mafColor the color of the low maf values
+#' @param categoryColor the color of the categories provided (ggplot default if NA)
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
@@ -26,9 +28,9 @@
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', typed=NA, annotation=NA, 
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", 
-                      thresholdHighColor = "red", mafColor = "black", build='b37', title=Sys.time()){
+manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', category = NA, typed = NA, annotation = NA, 
+                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", 
+                      mafColor = "black", categoryColors = NA, build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -46,13 +48,35 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   
   # Make a data frame for the plot
   
-  manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], maf = x[[maf]], stringsAsFactors = F)
+  manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], stringsAsFactors = F)
   manhattanData$logP <- -log10(manhattanData$p)
+  if (!is.na(maf)) {
+    manhattanData$typed <- x[[maf]]
+  }
   if (!is.na(typed)) {
     manhattanData$typed <- x[[typed]]
   }
   if (!is.na(annotation)) {
     manhattanData$annotation <- x[[annotation]]
+  }
+  if (!is.na(categories)) {
+    manhattanData$category <- x[[category]]
+    if (sum(is.na(manhattanData$category)) > 0) {
+      manhattanData$category[is.na(manhattanData$category)] <- ""
+    }
+    if (!is.factor(manhattanData$category)) {
+      manhattanData$category <- as.factor(manhattanData$category)
+    }
+    if (!is.na(categoryColors)) {
+      nColorsFound <- length(categoryColors)
+      nColorsNeeded <- length(levels(manhattanData$category))
+      if (nColorsFound == nColorsNeeded-1) {
+        categoryColors <- c("black", categoryColors)
+      }
+      if (length(categoryColors) != length(levels(manhattanData$category))) {
+        stop(paste(nColorsFound, " colors provided for ", nColorsNeeded, " categories.", sep = ""))
+      }
+    }
   }
   
   
@@ -110,12 +134,41 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', type
   # Plot all markers
   
   if (!is.na(typed)) {
-    manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed), col = "black", shape = 21)
+    if (!is.na(maf)) {
+      if (!is.na(category)) {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed, col = category), shape = 21)
+      } else {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed), col = "black", shape = 21)
+      }
+    } else {
+      if (!is.na(category)) {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, size = typed, col = category))
+      } else {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, size = typed), col = "black")
+      }
+    }
     manhattanPlot <- manhattanPlot + scale_size_manual(name = "", values = c(2, 1))
   } else {
-    manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf), col = "black", shape = 21)
+    if (!is.na(maf)) {
+      if (!is.na(category)) {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, col = category), shape = 21)
+      } else {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf), col = "black", shape = 21)
+      }
+    } else {
+      if (!is.na(category)) {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, col = category))
+      } else {
+        manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP), col = "black")
+      }
+    }
   }
-  manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "Maf", colors = c("white", mafColor))
+  if (!is.na(maf)) {
+    manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "Maf", colors = c("white", mafColor))
+  }
+  if (!is.na(category) & !is.na(categoryColors)) {
+    manhattanPlot <- manhattanPlot + scale_color_discrete(values = categoryColors)
+  }
   
   
   # Plot thresholds
