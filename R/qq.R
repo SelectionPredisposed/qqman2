@@ -2,6 +2,7 @@
 #' 
 #' @param x A data frame with result data
 #' @param p P-value column in data frame
+#' @param maf MAF column in data frame (ignored if NA)
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
 #' @param thresholdLow the low threshold value (log10)
 #' @param thresholdHigh the high threshold value (log10)
@@ -23,7 +24,10 @@ qq <- function(x, p='P', maf = 'MAF', typed = NA,
   
   # Make a data frame for the plot
   
-  qqData <- data.frame(p = x[[p]], maf = x[[maf]])
+  qqData <- data.frame(p = x[[p]])
+  if (!is.na(maf)) {
+    qqData$maf <- x[[maf]]
+  }
   qqData$logP <- -log10(qqData$p)
   if (!is.na(typed)) {
     qqData$typed <- x[[typed]]
@@ -50,7 +54,9 @@ qq <- function(x, p='P', maf = 'MAF', typed = NA,
   
   # Order by maf to have the common variants in front
   
-  qqData <- qqData[order(qqData$maf),]
+  if (!is.na(maf)) {
+    qqData <- qqData[order(qqData$maf), ]
+  }
   
   
   # Create the plot
@@ -60,11 +66,20 @@ qq <- function(x, p='P', maf = 'MAF', typed = NA,
   
   # Add the points
   
-  if (length(typed) > 1 || !is.na(typed)) {
-    qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP, col = maf, size = typed))
-    qqPlot <- qqPlot + scale_size_manual(name = "", values = c(2, 1))
+  if (!is.na(maf)) {
+    if (length(typed) > 1 || !is.na(typed)) {
+      qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP, col = maf, size = typed))
+      qqPlot <- qqPlot + scale_size_manual(name = "", values = c(2, 1))
+    } else {
+      qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP, col = maf))
+    }
   } else {
-    qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP, col = maf))
+    if (length(typed) > 1 || !is.na(typed)) {
+      qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP, size = typed), col = "black")
+      qqPlot <- qqPlot + scale_size_manual(name = "", values = c(2, 1))
+    } else {
+      qqPlot <- qqPlot + geom_point(data = qqData, aes(x = expectedP, y = logP), col = "black")
+    }
   }
   
   
@@ -84,7 +99,9 @@ qq <- function(x, p='P', maf = 'MAF', typed = NA,
   
   qqPlot <- qqPlot + scale_y_continuous(name = "-log10(p) Observed", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
   qqPlot <- qqPlot + scale_x_continuous(name = "-log10(p) Expected", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
-  qqPlot <- qqPlot + scale_color_gradientn(name = "Maf", colors = c("darkred", "chocolate", "darkgreen"))
+  if (!is.na(maf)) {
+    qqPlot <- qqPlot + scale_color_gradientn(name = "Maf", colors = c("darkred", "chocolate", "darkgreen"))
+  }
   qqPlot <- qqPlot + theme(panel.background = element_rect(fill = "white", colour = "grey50"),
                            panel.grid.major = element_line(colour = "grey50", linetype = "dotted"),
                            panel.grid.minor = element_blank())
