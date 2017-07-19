@@ -5,7 +5,7 @@
 #' @param chr Chromosome column in data frame
 #' @param pb SNP position column in data frame
 #' @param maf MAF column in data frame (ignored if NA)
-#' @param categories the column in the data frame indicating the markers categories (ignored if NA)
+#' @param category the column in the data frame indicating the markers category (ignored if NA)
 #' @param p P-value column in data frame
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
 #' @param annotation a vector of annotation (ignored if NA)
@@ -14,7 +14,7 @@
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
 #' @param mafColor the color of the low maf values
-#' @param categoryColor the color of the categories provided (ggplot default if NA)
+#' @param categoryColor the color of the category provided (ggplot default if NA)
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
@@ -51,15 +51,18 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], stringsAsFactors = F)
   manhattanData$logP <- -log10(manhattanData$p)
   if (!is.na(maf)) {
-    manhattanData$typed <- x[[maf]]
+    manhattanData$maf <- x[[maf]]
   }
   if (!is.na(typed)) {
     manhattanData$typed <- x[[typed]]
+    if (!is.factor(manhattanData$typed)) {
+      manhattanData$typed <- as.factor(manhattanData$typed)
+    }
   }
   if (!is.na(annotation)) {
     manhattanData$annotation <- x[[annotation]]
   }
-  if (!is.na(categories)) {
+  if (!is.na(category)) {
     manhattanData$category <- x[[category]]
     if (sum(is.na(manhattanData$category)) > 0) {
       manhattanData$category[is.na(manhattanData$category)] <- ""
@@ -67,14 +70,14 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
     if (!is.factor(manhattanData$category)) {
       manhattanData$category <- as.factor(manhattanData$category)
     }
-    if (!is.na(categoryColors)) {
+    if (length(categoryColors) > 1 || !is.na(categoryColors)) {
       nColorsFound <- length(categoryColors)
       nColorsNeeded <- length(levels(manhattanData$category))
       if (nColorsFound == nColorsNeeded-1) {
         categoryColors <- c("black", categoryColors)
       }
       if (length(categoryColors) != length(levels(manhattanData$category))) {
-        stop(paste(nColorsFound, " colors provided for ", nColorsNeeded, " categories.", sep = ""))
+        stop(paste(nColorsFound, " colors provided for ", nColorsNeeded, " category.", sep = ""))
       }
     }
   }
@@ -118,7 +121,9 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   
   # Order by maf to see common markers in front
   
-  manhattanData <- manhattanData[order(manhattanData$maf), ]
+  if (!is.na(maf)) {
+    manhattanData <- manhattanData[order(manhattanData$maf), ]
+  }
   
   
   # Make a ggplot object
@@ -166,8 +171,8 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   if (!is.na(maf)) {
     manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "Maf", colors = c("white", mafColor))
   }
-  if (!is.na(category) & !is.na(categoryColors)) {
-    manhattanPlot <- manhattanPlot + scale_color_discrete(values = categoryColors)
+  if (!is.na(category) && length(categoryColors) > 1 || !is.na(categoryColors)) {
+    manhattanPlot <- manhattanPlot + scale_color_manual(values = categoryColors)
   }
   
   
