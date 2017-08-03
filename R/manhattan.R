@@ -199,7 +199,7 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   # Add annotation if provided
   
   if (!is.na(annotation)) {
-    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData$annotation), ], aes(x = x, y = logP, label=annotation))
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData$annotation), ], aes(x = xValues, y = logP, label=annotation))
   }
   
   # Add title to plot if provided
