@@ -169,7 +169,7 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
     }
   }
   if (!is.na(maf)) {
-    manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "Maf", colors = c("white", mafColor))
+    manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "MAF", colors = c("white", mafColor))
   }
   if (!is.na(category) && length(categoryColors) > 1 || !is.na(categoryColors)) {
     manhattanPlot <- manhattanPlot + scale_color_manual(name = "", values = categoryColors)

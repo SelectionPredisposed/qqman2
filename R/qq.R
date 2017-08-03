@@ -100,7 +100,7 @@ qq <- function(x, p='P', maf = 'MAF', typed = NA,
   qqPlot <- qqPlot + scale_y_continuous(name = "-log10(p) Observed", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
   qqPlot <- qqPlot + scale_x_continuous(name = "-log10(p) Expected", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
   if (!is.na(maf)) {
-    qqPlot <- qqPlot + scale_color_gradientn(name = "Maf", colors = c("darkred", "chocolate", "darkgreen"))
+    qqPlot <- qqPlot + scale_color_gradientn(name = "MAF", colors = c("darkred", "chocolate", "darkgreen"))
   }
   qqPlot <- qqPlot + theme(panel.background = element_rect(fill = "white", colour = "grey50"),
                            panel.grid.major = element_line(colour = "grey50", linetype = "dotted"),
