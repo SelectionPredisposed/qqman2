@@ -1,20 +1,23 @@
 #' Creates a manhattan plot using ggplot2 and returns the plot object.
 #' 
 #' @param x A data frame with result data
+#' @param y A data frame with annotation data
+#' @param z A data frame with best hits data
 #' @param snp SNP column in data frame
 #' @param chr Chromosome column in data frame
 #' @param pb SNP position column in data frame
 #' @param maf MAF column in data frame (ignored if NA)
-#' @param category the column in the data frame indicating the markers category (ignored if NA)
 #' @param p P-value column in data frame
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
 #' @param annotation a vector of annotation (ignored if NA)
+#' @param categories vector of the columns in y indicating the markers category
+#' @param categoryColors list of the colors to use for the categories (ignored if NA)
+#' @param flanking the flanking size in kbp (10 by default)
 #' @param thresholdLow the low threshold value (log10)
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
 #' @param mafColor the color of the low maf values
-#' @param categoryColor the color of the category provided (ggplot default if NA)
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
@@ -28,9 +31,9 @@
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', category = NA, typed = NA, annotation = NA, 
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", 
-                      mafColor = "black", categoryColors = NA, build = 'b37', title = Sys.time()){
+manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
+                      category = "label", categoryColors = NA, flanking = 10,  thresholdLow = 5, thresholdHigh = -log10(5e-8), 
+                      thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black", build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -44,12 +47,12 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   } else {
     stop("Build not supported")
   }
+  genomeLength <- sum(chromosomeLength)
   
   
   # Make a data frame for the plot
   
   manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], stringsAsFactors = F)
-  manhattanData$logP <- -log10(manhattanData$p)
   if (!is.na(maf)) {
     manhattanData$maf <- x[[maf]]
   }
@@ -62,34 +65,38 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   if (!is.na(annotation)) {
     manhattanData$annotation <- x[[annotation]]
   }
-  if (!is.na(category)) {
-    manhattanData$category <- x[[category]]
-    if (sum(is.na(manhattanData$category)) > 0) {
-      manhattanData$category[is.na(manhattanData$category)] <- ""
-    }
-    if (!is.factor(manhattanData$category)) {
-      manhattanData$category <- as.factor(manhattanData$category)
-    }
-    if (length(categoryColors) > 1 || !is.na(categoryColors)) {
-      nColorsFound <- length(categoryColors)
-      nColorsNeeded <- length(levels(manhattanData$category))
-      if (nColorsFound == nColorsNeeded-1) {
-        categoryColors <- c("black", categoryColors)
-      }
-      if (length(categoryColors) != length(levels(manhattanData$category))) {
-        stop(paste(nColorsFound, " colors provided for ", nColorsNeeded, " category.", sep = ""))
-      }
-    }
+  manhattanData <- manhattanData[!is.na(manhattanData$p) & manhattanData$p > 0, ]
+  manhattanData$logP <- -log10(manhattanData$p)
+  
+  
+  # Create data frame for the annotation plot values
+  
+  if (length(y) > 1 || !is.na(y)) {
+    annotationDataFrame <- data.frame(snp = y[[snp]], chr = y[[chr]], bp = y[[bp]], category = y[[category]], stringsAsFactors = F)
+  }
+  
+  
+  # Create data frame for the best hits plot values
+  
+  if (length(z) > 1 || !is.na(z)) {
+    bestHitsDataFrame <- data.frame(chr = z[[chr]], bp = z[[bp]], stringsAsFactors = F)
   }
   
   
   # create vectors for horizontal annotation
   
+  
+  
+  # Sec color by category if available
+  
   xValues <- c() # The position of every SNP on the x axis
   xBreak <- c() # The center of every chromosome
   xBreakLabels <- c() # The labels to use for every chromosome
-  xStart <- c() # The start of every second chromosome
-  xEnd <- c() # The end of every second chromosome
+  chrStart <- c() # The start of every second chromosome
+  chrEnd <- c() # The end of every second chromosome
+  if (length(z) > 1 || !is.na(z)) {
+    bestHitsDataFrame$x <- 0 # The position of every gene
+  }
   
   manhattanData <- manhattanData[order(manhattanData$chr, manhattanData$bp), ]
   
@@ -97,32 +104,71 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   
   xOffset <- 0
   start <- T
-  for (chr in 1:22) {
-    bpTemp <- manhattanData$bp[manhattanData$chr == chr]
+  for (chromosomeNumber in 1:22) {
+    
+    bpTemp <- manhattanData$bp[manhattanData$chr == chromosomeNumber]
     xTemp <- bpTemp + xOffset
     breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
     xBreak <- c(xBreak, breakValue)
-    if (chr < 12 || chr %% 2 == 0) {
-      xBreakLabels <- c(xBreakLabels, chr)
+    if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
+      xBreakLabels <- c(xBreakLabels, chromosomeNumber)
     } else {
       xBreakLabels <- c(xBreakLabels, "")
     }
     xValues <- c(xValues, xTemp)
-    xOffset <- xOffset + chromosomeLength[chr]
+    
+    if (length(y) > 1 || !is.na(y)) {
+      bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
+      xTemp <- bpTemp + xOffset
+      startTemp <- xTemp - flanking * 1000
+      annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
+      endTemp <- xTemp + flanking * 1000
+      annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
+    }
+    
+    if (length(z) > 1 || !is.na(z)) {
+      bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
+    }
+    
+    
+    xOffset <- xOffset + chromosomeLength[chromosomeNumber]
     if (start) {
-      xStart <- c(xStart, xOffset)
+      chrStart <- c(chrStart, xOffset)
     } else {
-      xEnd <- c(xEnd, xOffset)
+      chrEnd <- c(chrEnd, xOffset)
     }
     start <- !start
+    
   }
   manhattanData$xValues <- xValues
   
   
-  # Order by maf to see common markers in front
+  if (length(y) > 1 || !is.na(y)) {
+    
+    manhattanData$category <- ""
+    
+    for (i in 1:nrow(annotationDataFrame)) {
+      
+      iStart <- annotationDataFrame$xStart[i]
+      iEnd <- annotationDataFrame$xEnd[i]
+      iCategory <- annotationDataFrame$category[i]
+      
+      manhattanData$category[manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd] <- iCategory
+      
+    }
+    
+    manhattanData$category <- factor(manhattanData$category)
+    
+  }
+  
+  
+  # Order by category and maf to see common markers in front
   
   if (!is.na(maf)) {
     manhattanData <- manhattanData[order(manhattanData$maf), ]
+  }
+  if (length(y) > 1 || !is.na(y)) {
+    manhattanData <- manhattanData[order(manhattanData$category, na.last = F), ]
   }
   
   
@@ -133,20 +179,27 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   
   # Add background rectangle for every second chromosome
   
-  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = xStart, xmax = xEnd, ymin = 0, ymax = yMax), alpha = 0.2)
+  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = chrStart, xmax = chrEnd, ymin = 0, ymax = yMax), alpha = 0.2)
+  
+  
+  # Add line for every best hit
+  
+  if (length(z) > 1 || !is.na(z)) {
+    manhattanPlot <- manhattanPlot + geom_vline(aes(xintercept = bestHitsDataFrame$x), col = "black", linetype = "dotted")
+  }
   
   
   # Plot all markers
   
   if (!is.na(typed)) {
     if (!is.na(maf)) {
-      if (!is.na(category)) {
+      if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed, col = category), shape = 21)
       } else {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed), col = "black", shape = 21)
       }
     } else {
-      if (!is.na(category)) {
+      if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, size = typed, col = category))
       } else {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, size = typed), col = "black")
@@ -155,13 +208,13 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
     manhattanPlot <- manhattanPlot + scale_size_manual(name = "", values = c(2, 1))
   } else {
     if (!is.na(maf)) {
-      if (!is.na(category)) {
+      if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, col = category), shape = 21)
       } else {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf), col = "black", shape = 21)
       }
     } else {
-      if (!is.na(category)) {
+      if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, col = category))
       } else {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP), col = "black")
@@ -171,8 +224,23 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   if (!is.na(maf)) {
     manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "MAF", colors = c("white", mafColor))
   }
-  if (!is.na(category) && length(categoryColors) > 1 || !is.na(categoryColors)) {
-    manhattanPlot <- manhattanPlot + scale_color_manual(name = "", values = categoryColors)
+  if (length(y) > 1 || !is.na(y)) {
+    
+    categoryLevels <- levels(manhattanData$category)
+    
+    if (length(categoryColors) > 1 || !is.na(categoryColors)) {
+      
+        categoryColorsTemp <- c("black", categoryColors)
+      
+    } else {
+      
+        categoryColorsTemp <- c("black", scales::hue_pal()(length(categoryLevels)-1))
+      
+    }
+    
+    
+    manhattanPlot <- manhattanPlot + scale_color_manual(name = "", values = categoryColorsTemp)
+    
   }
   
   
@@ -185,16 +253,17 @@ manhattan <- function(x, snp='SNP', chr='CHR', bp='BP', p='P', maf = 'MAF', cate
   # Set axes labels 
   
   manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
-  manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0.01))
+  manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
   # Format background and grid
   
-  manhattanPlot <- manhattanPlot + theme(panel.background = element_rect(fill = "white", colour = "grey50"),
+  manhattanPlot <- manhattanPlot + theme(panel.background = element_rect(fill = NA, colour = "grey50"),
                                          panel.grid.major.y = element_line(colour = "grey50", linetype = "dotted"),
                                          panel.grid.minor.y = element_blank(),
                                          panel.grid.major.x = element_blank(),
-                                         panel.grid.minor.x = element_blank())
+                                         panel.grid.minor.x = element_blank(),
+                                         legend.box.background = element_rect(fill = NA, colour = NA))
   
   # Add annotation if provided
   
