@@ -116,7 +116,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   
   manhattanData <- manhattanData[order(manhattanData$chr, manhattanData$bp), ]
   
-  yMax <- max(round(max(manhattanData$logP)+1), thresholdHigh)
+  yMax <- max(round(max(abs(manhattanData$logP))+1), thresholdHigh)
   
   xOffset <- 0
   start <- T
@@ -172,7 +172,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
       
       snpInWindow <- manhattanData$chr == iChr & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd
       
-      snpOverThreshold <- snpInWindow & manhattanData$logP >= categoryMinP
+      snpOverThreshold <- snpInWindow & abs(manhattanData$logP) >= categoryMinP
       
       if (sum(snpOverThreshold) > 0) {
         
@@ -273,12 +273,14 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   
   manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = thresholdLow), col = thresholdLowColor)
   manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = thresholdHigh), col = thresholdHighColor)
+  manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = -thresholdLow), col = thresholdLowColor)
+  manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = -thresholdHigh), col = thresholdHighColor)
   
   
   # Set axes labels 
   
   axisLabel <- paste(x1Name, " | ", x1Name, " [-log10(p)]")
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yMax:yMax, limits = c(-yMax, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   

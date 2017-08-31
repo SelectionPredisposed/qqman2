@@ -52,7 +52,7 @@ bestHits <- data.frame(chromosome = c(1, 7, 16), position = c(65991203, 12786016
 
 # Make MH
 
-mhPlot <- manhattan(associationData, y = annotationTableAdulthood, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", typed = "typed", category = "label", categoryColors = c("red"))
+mhPlot <- manhattan(x = associationData, y = annotationTableAdulthood, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", typed = "typed", category = "label", categoryColors = c("red"), categoryFlanking = 20, categoryMinP = 5)
 
 png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood.png", width = 800, height = 600)
 plot(mhPlot)
