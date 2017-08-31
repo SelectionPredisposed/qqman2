@@ -1,6 +1,9 @@
-#' Creates a manhattan plot using ggplot2 and returns the plot object.
+#' Creates a mirrored manhattan plot using ggplot2 and returns the plot object.
 #' 
-#' @param x A data frame with association result data
+#' @param x1 A data frame with association result data to be plotted on the upper side
+#' @param x2 A data frame with association result data to be plotted on the lower side
+#' @param x1Name the name of the first association result
+#' @param x2Name the name of the second association result
 #' @param y A data frame with annotation data
 #' @param z A data frame with best hits data
 #' @param snp SNP identifier column in data frame
@@ -32,7 +35,7 @@
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
+manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
                       category = "label", categoryColors = NA, categoryFlanking = 10, categoryMinP = 5,  thresholdLow = 5, thresholdHigh = -log10(5e-8), 
                       thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black", build = 'b37', title = Sys.time()){
   
@@ -53,22 +56,39 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Make a data frame for the plot
   
-  manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], stringsAsFactors = F)
+  manhattanData1 <- data.frame(snp = x1[[snp]], chr = x1[[chr]], bp = x1[[bp]], p = x1[[p]], stringsAsFactors = F)
   if (!is.na(maf)) {
-    manhattanData$maf <- x[[maf]]
+    manhattanData1$maf <- x1[[maf]]
   }
   if (!is.na(typed)) {
-    manhattanData$typed <- x[[typed]]
-    if (!is.factor(manhattanData$typed)) {
-      manhattanData$typed <- as.factor(manhattanData$typed)
+    manhattanData1$typed <- x1[[typed]]
+    if (!is.factor(manhattanData1$typed)) {
+      manhattanData1$typed <- as.factor(manhattanData1$typed)
     }
   }
   if (!is.na(annotation)) {
-    manhattanData$annotation <- x[[annotation]]
+    manhattanData1$annotation <- x1[[annotation]]
   }
-  manhattanData <- manhattanData[!is.na(manhattanData$p) & manhattanData$p > 0, ]
-  manhattanData$logP <- -log10(manhattanData$p)
+  manhattanData1 <- manhattanData1[!is.na(manhattanData1$p) & manhattanData1$p > 0, ]
+  manhattanData1$logP <- -log10(manhattanData1$p)
   
+  manhattanData2 <- data.frame(snp = x2[[snp]], chr = x2[[chr]], bp = x2[[bp]], p = x2[[p]], stringsAsFactors = F)
+  if (!is.na(maf)) {
+    manhattanData2$maf <- x2[[maf]]
+  }
+  if (!is.na(typed)) {
+    manhattanData2$typed <- x2[[typed]]
+    if (!is.factor(manhattanData2$typed)) {
+      manhattanData2$typed <- as.factor(manhattanData2$typed)
+    }
+  }
+  if (!is.na(annotation)) {
+    manhattanData2$annotation <- x2[[annotation]]
+  }
+  manhattanData2 <- manhattanData2[!is.na(manhattanData2$p) & manhattanData2$p > 0, ]
+  manhattanData2$logP <- log10(manhattanData2$p)
+  
+  manhattanData <- rbind(manhattanData1, manhattanData2)
   
   # Create data frame for the annotation plot values
   
@@ -235,11 +255,11 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     
     if (length(categoryColors) > 1 || !is.na(categoryColors)) {
       
-        categoryColorsTemp <- c("black", categoryColors)
+      categoryColorsTemp <- c("black", categoryColors)
       
     } else {
       
-        categoryColorsTemp <- c("black", scales::hue_pal()(length(categoryLevels)-1))
+      categoryColorsTemp <- c("black", scales::hue_pal()(length(categoryLevels)-1))
       
     }
     
@@ -257,7 +277,8 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Set axes labels 
   
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
+  axisLabel <- paste(x1Name, " | ", x1Name, " [-log10(p)]")
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
