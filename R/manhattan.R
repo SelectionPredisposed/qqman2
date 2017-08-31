@@ -156,7 +156,7 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       
       if (sum(snpOverThreshold) > 0) {
         
-        manhattanData$category[snpInWindow] <- category
+        manhattanData$category[snpInWindow] <- iCategory
         
       }
       
