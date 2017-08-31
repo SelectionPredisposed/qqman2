@@ -12,7 +12,8 @@
 #' @param annotation a vector of annotation (ignored if NA)
 #' @param categories vector of the columns in y indicating the markers category
 #' @param categoryColors list of the colors to use for the categories (ignored if NA)
-#' @param flanking the flanking size in kbp (10 by default)
+#' @param categoryFlanking the flanking size in kbp (10 by default)
+#' @param categoryMinP the worse log transformed p-value to consider for category annotation (5 by default)
 #' @param thresholdLow the low threshold value (log10)
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
@@ -32,7 +33,7 @@
 #devtools::use_package("ggrepel", "Suggests")
 
 manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
-                      category = "label", categoryColors = NA, flanking = 10,  thresholdLow = 5, thresholdHigh = -log10(5e-8), 
+                      category = "label", categoryColors = NA, categoryFlanking = 10, categoryMinP = 5,  thresholdLow = 5, thresholdHigh = -log10(5e-8), 
                       thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black", build = 'b37', title = Sys.time()){
   
   
@@ -81,11 +82,6 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   if (length(z) > 1 || !is.na(z)) {
     bestHitsDataFrame <- data.frame(chr = z[[chr]], bp = z[[bp]], stringsAsFactors = F)
   }
-  
-  
-  # create vectors for horizontal annotation
-  
-  
   
   # Sec color by category if available
   
@@ -153,7 +149,7 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       iEnd <- annotationDataFrame$xEnd[i]
       iCategory <- annotationDataFrame$category[i]
       
-      manhattanData$category[manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd] <- iCategory
+      manhattanData$category[manhattanData$logP >= categoryMinP & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd] <- iCategory
       
     }
     
