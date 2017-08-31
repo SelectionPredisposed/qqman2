@@ -3,7 +3,7 @@
 #' @param x A data frame with result data
 #' @param y A data frame with annotation data
 #' @param z A data frame with best hits data
-#' @param snp SNP column in data frame
+#' @param snp SNP identifier column in data frame
 #' @param chr Chromosome column in data frame
 #' @param pb SNP position column in data frame
 #' @param maf MAF column in data frame (ignored if NA)
@@ -145,11 +145,20 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     
     for (i in 1:nrow(annotationDataFrame)) {
       
+      iChr <- annotationDataFrame$chr[i]
       iStart <- annotationDataFrame$xStart[i]
       iEnd <- annotationDataFrame$xEnd[i]
       iCategory <- annotationDataFrame$category[i]
       
-      manhattanData$category[manhattanData$logP >= categoryMinP & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd] <- iCategory
+      snpInWindow <- manhattanData$chr == iChr & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd
+      
+      snpOverThreshold <- snpInWindow & manhattanData$logP >= categoryMinP
+      
+      if (sum(snpOverThreshold) > 0) {
+        
+        manhattanData$category[snpInWindow] <- category
+        
+      }
       
     }
     
