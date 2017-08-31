@@ -116,9 +116,9 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     if (length(y) > 1 || !is.na(y)) {
       bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
       xTemp <- bpTemp + xOffset
-      startTemp <- xTemp - flanking * 1000
+      startTemp <- xTemp - categoryFlanking * 1000
       annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
-      endTemp <- xTemp + flanking * 1000
+      endTemp <- xTemp + categoryFlanking * 1000
       annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
     }
     
