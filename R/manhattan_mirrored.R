@@ -204,7 +204,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   
   # Add background rectangle for every second chromosome
   
-  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = chrStart, xmax = chrEnd, ymin = 0, ymax = yMax), alpha = 0.2)
+  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = chrStart, xmax = chrEnd, ymin = -yMax, ymax = yMax), alpha = 0.2)
   
   
   # Add line for every best hit
