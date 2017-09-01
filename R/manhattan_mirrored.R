@@ -279,7 +279,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   
   # Set axes labels 
   
-  axisLabel <- paste(x1Name, " | ", x1Name, " [-log10(p)]")
+  axisLabel <- paste(x2Name, " | ", x1Name, " [-log10(p)]")
   manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yMax:yMax, limits = c(-yMax, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
