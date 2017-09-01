@@ -8,12 +8,12 @@
 #' @param z A data frame with best hits data
 #' @param snp SNP identifier column in data frame
 #' @param chr Chromosome column in data frame
-#' @param pb SNP position column in data frame
+#' @param bp SNP position column in data frame
 #' @param maf MAF column in data frame (ignored if NA)
 #' @param p P-value column in data frame
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
-#' @param annotation a vector of annotation (ignored if NA)
-#' @param categories vector of the columns in y indicating the markers category
+#' @param annotation the column in x data frame to use for annotation with text labels (ignored if NA)
+#' @param category the column in y indicating the markers category to highlight in color
 #' @param categoryColors list of the colors to use for the categories (ignored if NA)
 #' @param categoryFlanking the flanking size in kbp (10 by default)
 #' @param categoryMinP the worse log transformed p-value to consider for category annotation (5 by default)

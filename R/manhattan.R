@@ -5,12 +5,12 @@
 #' @param z A data frame with best hits data
 #' @param snp SNP identifier column in data frame
 #' @param chr Chromosome column in data frame
-#' @param pb SNP position column in data frame
+#' @param bp SNP position column in data frame
 #' @param maf MAF column in data frame (ignored if NA)
 #' @param p P-value column in data frame
 #' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
-#' @param annotation a vector of annotation (ignored if NA)
-#' @param categories vector of the columns in y indicating the markers category
+#' @param annotation the column in x data frame to use for annotation with text labels (ignored if NA)
+#' @param category the column in y indicating the markers category to highlight in color
 #' @param categoryColors list of the colors to use for the categories (ignored if NA)
 #' @param categoryFlanking the flanking size in kbp (10 by default)
 #' @param categoryMinP the worse log transformed p-value to consider for category annotation (5 by default)
@@ -114,12 +114,14 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     xValues <- c(xValues, xTemp)
     
     if (length(y) > 1 || !is.na(y)) {
+      
       bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
       xTemp <- bpTemp + xOffset
       startTemp <- xTemp - categoryFlanking * 1000
       annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
       endTemp <- xTemp + categoryFlanking * 1000
       annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
+    
     }
     
     if (length(z) > 1 || !is.na(z)) {
@@ -150,9 +152,33 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       iEnd <- annotationDataFrame$xEnd[i]
       iCategory <- annotationDataFrame$category[i]
       
+      if (sum(is.na(manhattanData$logP)) > 0) {
+        stop("logP NA")
+      }
+      if (sum(is.na(manhattanData$chr)) > 0) {
+        stop("Chr NA")
+      }
+      if (sum(is.na(manhattanData$xValues)) > 0) {
+        stop("x NA")
+      }
+      if (sum(is.na(iStart)) > 0) {
+        stop("iStart NA")
+      }
+      if (sum(is.na(iEnd)) > 0) {
+        stop("iEnd NA")
+      }
+      
       snpInWindow <- manhattanData$chr == iChr & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd
       
+      if (sum(is.na(snpInWindow)) > 0) {
+        stop("snp NA")
+      }
+      
       snpOverThreshold <- snpInWindow & manhattanData$logP >= categoryMinP
+      
+      if (sum(is.na(snpOverThreshold)) > 0) {
+        stop("snp NA")
+      }
       
       if (sum(snpOverThreshold) > 0) {
         
