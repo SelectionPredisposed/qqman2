@@ -33,7 +33,7 @@
 #devtools::use_package("ggrepel", "Suggests")
 
 manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
-                      category = "label", categoryColors = NA, categoryFlanking = 10, categoryMinP = 5,  thresholdLow = 5, thresholdHigh = -log10(5e-8), 
+                      category = "label", categoryColors = NA, categoryFlanking = 10, categoryMinP = 5, thresholdLow = 5, thresholdHigh = -log10(5e-8), 
                       thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black", build = 'b37', title = Sys.time()){
   
   
@@ -253,19 +253,52 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     }
   }
   if (!is.na(maf)) {
+    
     manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "MAF", colors = c("white", mafColor))
+    
   }
   if (length(y) > 1 || !is.na(y)) {
     
-    categoryLevels <- levels(manhattanData$category)
+    categoryColorsTemp <- levels(manhattanData$category)
     
     if (length(categoryColors) > 1 || !is.na(categoryColors)) {
       
+      if ("" %in% categoryColorsTemp) {
+        
         categoryColorsTemp <- c("black", categoryColors)
+        
+      } else {
+        
+        categoryColorsTemp <- categoryColors
+        
+      }
+      
       
     } else {
       
-        categoryColorsTemp <- c("black", scales::hue_pal()(length(categoryLevels)-1))
+      if ("" %in% categoryColorsTemp) {
+        
+        categoryColorsTemp <- c("black")
+        
+        colorOffset <- 1
+        
+      } else {
+        
+        categoryColorsTemp <- c()
+        
+        colorOffset <- 0
+        
+      }
+      
+      if (length(categoryColorsTemp) > colorOffset) {
+        
+        categoryColorsTemp <- c(categoryColorsTemp, scales::hue_pal()(length(categoryLevels)-colorOffset))
+        
+      } else {
+        
+        manhattanPlot <- manhattanPlot + guides(color = 'none')
+        
+      }
       
     }
     
@@ -299,7 +332,13 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   # Add annotation if provided
   
   if (!is.na(annotation)) {
-    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData$annotation), ], aes(x = xValues, y = logP, label=annotation))
+    
+    manhattanData$annotation[is.na(manhattanData$annotation)] <- ""
+    
+    nudge_p <- yMax - manhattanData$logP - 0.5
+    
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData, aes(x = xValues, y = logP, label=annotation), nudge_y = nudge_p)
+  
   }
   
   # Add title to plot if provided

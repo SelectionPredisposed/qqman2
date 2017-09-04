@@ -251,15 +251,42 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   }
   if (length(y) > 1 || !is.na(y)) {
     
-    categoryLevels <- levels(manhattanData$category)
+    categoryColorsTemp <- levels(manhattanData$category)
     
     if (length(categoryColors) > 1 || !is.na(categoryColors)) {
       
-      categoryColorsTemp <- c("black", categoryColors)
+      if ("" %in% categoryColorsTemp) {
+        
+        categoryColorsTemp <- c("black", categoryColors)
+        
+      } else {
+        
+        categoryColorsTemp <- categoryColors
+        
+      }
+      
       
     } else {
       
-      categoryColorsTemp <- c("black", scales::hue_pal()(length(categoryLevels)-1))
+      if ("" %in% categoryColorsTemp) {
+        
+        categoryColorsTemp <- c("black")
+        
+        colorOffset <- 1
+        
+      } else {
+        
+        categoryColorsTemp <- c()
+        
+        colorOffset <- 0
+        
+      }
+      
+      if (length(categoryLevels) > colorOffset) {
+        
+        categoryColorsTemp <- c(categoryColorsTemp, scales::hue_pal()(length(categoryLevels)-colorOffset))
+        
+      }
       
     }
     
@@ -296,7 +323,13 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, snp='SNP'
   # Add annotation if provided
   
   if (!is.na(annotation)) {
-    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData[!is.na(manhattanData$annotation), ], aes(x = xValues, y = logP, label=annotation))
+    
+    manhattanData$annotation[is.na(manhattanData$annotation)] <- ""
+    
+    nudge_p <- yMax - manhattanData$logP - 0.5
+    
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData, aes(x = xValues, y = logP, label=annotation), nudge_y = nudge_p)
+    
   }
   
   # Add title to plot if provided
