@@ -28,10 +28,10 @@ annotationTable$birth <- ifelse(annotationTable$rsid %in% birthTable$rsid, 0, 1)
 annotationTable$childhood <- ifelse(annotationTable$rsid %in% childhoodTable$rsid, 0, 1)
 annotationTable$adulthood <- ifelse(annotationTable$rsid %in% adulthoodTable$rsid, 0, 1)
 
-annotationTableBirth <- birthTable[, c("rsid", "chromosome", "position")]
+annotationTableBirth <- birthTable[, c("rsid", "chromosome", "position", "LOCUS")]
 annotationTableBirth$label <- "Birth"
 
-annotationTableAdulthood <- adulthoodTable[, c("rsid", "chromosome", "position")]
+annotationTableAdulthood <- adulthoodTable[, c("rsid", "chromosome", "position", "LOCUS")]
 annotationTableAdulthood$label <- "Adulthood"
 
 
@@ -52,24 +52,22 @@ bestHits <- data.frame(chromosome = c(1, 7, 16), position = c(65991203, 12786016
 
 # Make MH
 
-mhPlot <- manhattan(x = associationData, y = annotationTableAdulthood, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", typed = "typed", category = "label", categoryColors = c("red"), categoryFlanking = 20, categoryMinP = 5)
+mhPlot <- manhattan(x = associationData, x.snp = "rsid", x.chr = "chromosome", x.bp = "position", x.p = "frequentist_add_pvalue", x.typed = "typed", 
+                    y = annotationTableAdulthood, y.snp = "rsid", y.chr = "chromosome", y.bp = "position", y.category = "label", y.name = "LOCUS", y.colors = c("red"), 
+                    z = NA)
 
-png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood.png", width = 800, height = 600)
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_y.png", width = 800, height = 600)
 plot(mhPlot)
 dummy <- dev.off()
 
-# Make MH with MAF
+mhPlot <- manhattan(x = associationData, x.snp = "rsid", x.chr = "chromosome", x.bp = "position", x.p = "frequentist_add_pvalue", x.typed = "typed", 
+                    y = annotationTableAdulthood, y.snp = "rsid", y.chr = "chromosome", y.bp = "position", y.category = "label", y.name = NA, y.colors = c("red"), 
+                    z = bestHits, z.chr = "chromosome", z.bp = "position", z.name = "name")
 
-mhPlot <- manhattan(associationData, y = annotationTableAdulthood, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", maf = "all_maf", typed = "typed", category = "label", categoryColors = c("red"))
-
-png("C:\\Github\\qqman2\\tmp\\mh_11_maf_adulthood.png", width = 800, height = 600)
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_z.png", width = 800, height = 600)
 plot(mhPlot)
 dummy <- dev.off()
 
-# Make MH with best hits
-
-mhPlot <- manhattan(associationData, y = annotationTableAdulthood, z = bestHits, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", maf = "all_maf", typed = "typed", category = "label", categoryColors = c("red"))
-mhGrob <- ggplotGrob(mhPlot)
 
 # Categories settings
 
@@ -86,5 +84,27 @@ colorList <- list(
 mergedPlot <- add_reference(mhGrob = mhGrob, y = annotationTable, z = bestHits, snp = "rsid", chr = "chromosome", bp = "position", categories = categories, categoryColors = colorList, flanking = 3)
 
 png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_annotated.png", width = 800, height = 600)
+grid.draw(mergedPlot)
+dummy <- dev.off()
+
+
+# Random mirror plot
+
+associationDataRandom <- associationData
+associationDataRandom$frequentist_add_pvalue <- associationDataRandom$frequentist_add_pvalue[sample(1:nrow(associationDataRandom), nrow(associationDataRandom))]
+
+mirroredPlot <- manhattan_mirrored(x1 = associationData, x2 = associationDataRandom, x1Name = "Association", x2Name = "Random", y = annotationTableAdulthood, snp = "rsid", chr = "chromosome", bp = "position", p = "frequentist_add_pvalue", typed = "typed", category = "label", categoryColors = c("red"), categoryFlanking = 20, categoryMinP = 5)
+
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_mirror.png", width = 800, height = 600)
+plot(mirroredPlot)
+dummy <- dev.off()
+
+# Add annotation
+
+mhGrob <- ggplotGrob(mirroredPlot)
+
+mergedPlot <- add_reference(mhGrob = mhGrob, y = annotationTable, z = bestHits, snp = "rsid", chr = "chromosome", bp = "position", categories = categories, categoryColors = colorList, flanking = 3)
+
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_annotated_mirrored.png", width = 800, height = 600)
 grid.draw(mergedPlot)
 dummy <- dev.off()

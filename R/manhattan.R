@@ -1,19 +1,27 @@
 #' Creates a manhattan plot using ggplot2 and returns the plot object.
 #' 
 #' @param x A data frame with association result data
-#' @param y A data frame with annotation data
-#' @param z A data frame with best hits data
-#' @param snp SNP identifier column in data frame
-#' @param chr Chromosome column in data frame
-#' @param bp SNP position column in data frame
-#' @param maf MAF column in data frame (ignored if NA)
-#' @param p P-value column in data frame
-#' @param typed the column in the data frame indicating whether the markers are genotyped or imputed (ignored if NA)
-#' @param annotation the column in x data frame to use for annotation with text labels (ignored if NA)
-#' @param category the column in y indicating the markers category to highlight in color
-#' @param categoryColors list of the colors to use for the categories (ignored if NA)
-#' @param categoryFlanking the flanking size in kbp (10 by default)
-#' @param categoryMinP the worse log transformed p-value to consider for category annotation (5 by default)
+#' @param y A data frame with annotation data to color markers in an area and annotate the top SNP (ignored if NA)
+#' @param z A data frame with reference hits to be annotated using vertical lines (ignored if NA)
+#' @param x.snp SNP identifier column in the x data frame
+#' @param x.chr Chromosome column in the x data frame
+#' @param x.bp SNP position column in the x data frame
+#' @param x.maf MAF column in the x data frame (ignored if NA)
+#' @param x.p P-value column in the x data frame
+#' @param x.typed the column in the x data frame indicating whether the markers are genotyped or imputed (ignored if NA)
+#' @param x.annotation the column in the x data frame indicating used to annotate markers with text (ignored if NA)
+#' @param x.color the color used to annotate high maf values (black by default, ignored if x.maf is NA)
+#' @param y.snp SNP identifier column in the y data frame
+#' @param y.chr Chromosome column in the y data frame
+#' @param y.bp SNP position column in the y data frame
+#' @param y.category the column in y indicating the markers category to highlight in color
+#' @param y.name the column in y indicating the names to use to annotate the best hit in the colored region (ignored if NA)
+#' @param y.colors the colors to use to annotate the different categories
+#' @param y.flanking the flanking to use for coloring in kbp (50 by default)
+#' @param y.minP the the minimal p-value a category has to reach to be included in the coloring (5 by default)
+#' @param z.chr Chromosome column in the z data frame
+#' @param z.bp SNP position column in the z data frame
+#' @param z.name the column in z indicating the names to use to annotate the markers of z with text (ignored if NA)
 #' @param thresholdLow the low threshold value (log10)
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
@@ -32,9 +40,11 @@
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', maf = NA, typed = NA, annotation = NA, 
-                      category = "label", categoryColors = NA, categoryFlanking = 10, categoryMinP = 5, thresholdLow = 5, thresholdHigh = -log10(5e-8), 
-                      thresholdLowColor = "blue", thresholdHighColor = "red", mafColor = "black", build = 'b37', title = Sys.time()){
+manhattan <- function(x, y = NA, z = NA, 
+                      x.snp='SNP', x.chr='CHR', x.bp='BP', x.p='P', x.maf = NA, x.typed = NA, x.annotation = NA, x.color = "black", 
+                      y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = "name", y.colors = NA, y.flanking = 50, y.minP = 5, 
+                      z.chr='CHR', z.bp='BP', z.name = "name", 
+                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -53,18 +63,18 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Make a data frame for the plot
   
-  manhattanData <- data.frame(snp = x[[snp]], chr = x[[chr]], bp = x[[bp]], p = x[[p]], stringsAsFactors = F)
-  if (!is.na(maf)) {
-    manhattanData$maf <- x[[maf]]
+  manhattanData <- data.frame(snp = x[[x.snp]], chr = x[[x.chr]], bp = x[[x.bp]], p = x[[x.p]], stringsAsFactors = F)
+  if (!is.na(x.maf)) {
+    manhattanData$maf <- x[[x.maf]]
   }
-  if (!is.na(typed)) {
-    manhattanData$typed <- x[[typed]]
+  if (!is.na(x.typed)) {
+    manhattanData$typed <- x[[x.typed]]
     if (!is.factor(manhattanData$typed)) {
       manhattanData$typed <- as.factor(manhattanData$typed)
     }
   }
-  if (!is.na(annotation)) {
-    manhattanData$annotation <- x[[annotation]]
+  if (!is.na(x.annotation)) {
+    manhattanData$annotation <- x[[x.annotation]]
   }
   manhattanData <- manhattanData[!is.na(manhattanData$p) & manhattanData$p > 0, ]
   manhattanData$logP <- -log10(manhattanData$p)
@@ -73,17 +83,35 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   # Create data frame for the annotation plot values
   
   if (length(y) > 1 || !is.na(y)) {
-    annotationDataFrame <- data.frame(snp = y[[snp]], chr = y[[chr]], bp = y[[bp]], category = y[[category]], stringsAsFactors = F)
+    
+    annotationDataFrame <- data.frame(snp = y[[y.snp]], chr = y[[y.chr]], bp = y[[y.bp]], category = y[[y.category]], stringsAsFactors = F)
+    
+    if (!is.na(y.name)) {
+      
+      annotationDataFrame$id <- y[[y.name]]
+      annotationDataFrame$annotationX <- 0
+      annotationDataFrame$annotationP <- 0
+      
+    }
+    
   }
   
   
   # Create data frame for the best hits plot values
   
   if (length(z) > 1 || !is.na(z)) {
-    bestHitsDataFrame <- data.frame(chr = z[[chr]], bp = z[[bp]], stringsAsFactors = F)
+    
+    bestHitsDataFrame <- data.frame(chr = z[[z.chr]], bp = z[[z.bp]], stringsAsFactors = F)
+    
+    if (!is.na(z.name)) {
+      
+      bestHitsDataFrame$id <- z[[z.name]]
+      
+    }
   }
   
-  # Sec color by category if available
+  
+  # Map chromosomic coordinates to x axis
   
   xValues <- c() # The position of every SNP on the x axis
   xBreak <- c() # The center of every chromosome
@@ -97,6 +125,15 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   manhattanData <- manhattanData[order(manhattanData$chr, manhattanData$bp), ]
   
   yMax <- max(round(max(manhattanData$logP)+1), thresholdHigh)
+    yPMax <- yMax
+  
+  if (length(z) > 1 || !is.na(z)) {
+    
+    yAnnotation <- yMax +0.5
+    
+    yMax <- yMax + 1
+    
+  }
   
   xOffset <- 0
   start <- T
@@ -117,9 +154,9 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       
       bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
       xTemp <- bpTemp + xOffset
-      startTemp <- xTemp - categoryFlanking * 1000
+      startTemp <- xTemp - y.flanking * 1000
       annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
-      endTemp <- xTemp + categoryFlanking * 1000
+      endTemp <- xTemp + y.flanking * 1000
       annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
     
     }
@@ -141,6 +178,9 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   manhattanData$xValues <- xValues
   
   
+  
+  # See if some markers should be annotated
+  
   if (length(y) > 1 || !is.na(y)) {
     
     manhattanData$category <- ""
@@ -152,37 +192,28 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       iEnd <- annotationDataFrame$xEnd[i]
       iCategory <- annotationDataFrame$category[i]
       
-      if (sum(is.na(manhattanData$logP)) > 0) {
-        stop("logP NA")
-      }
-      if (sum(is.na(manhattanData$chr)) > 0) {
-        stop("Chr NA")
-      }
-      if (sum(is.na(manhattanData$xValues)) > 0) {
-        stop("x NA")
-      }
-      if (sum(is.na(iStart)) > 0) {
-        stop("iStart NA")
-      }
-      if (sum(is.na(iEnd)) > 0) {
-        stop("iEnd NA")
-      }
-      
       snpInWindow <- manhattanData$chr == iChr & manhattanData$xValues >= iStart & manhattanData$xValues <= iEnd
       
-      if (sum(is.na(snpInWindow)) > 0) {
-        stop("snp NA")
-      }
-      
-      snpOverThreshold <- snpInWindow & manhattanData$logP >= categoryMinP
-      
-      if (sum(is.na(snpOverThreshold)) > 0) {
-        stop("snp NA")
-      }
+      snpOverThreshold <- snpInWindow & manhattanData$logP >=  y.minP
       
       if (sum(snpOverThreshold) > 0) {
         
         manhattanData$category[snpInWindow] <- iCategory
+        
+        if (!is.na(y.name)) {
+          
+          windowData <- manhattanData[snpInWindow, ]
+          
+          maxP <- max(windowData$logP)
+          j <- round(median(which(test == 3)))
+          annotationDataFrame$annotationX[i] <- windowData$xValues[j]
+          annotationDataFrame$annotationP[i] <- maxP
+          
+        }
+        
+      } else if (!is.na(y.name)) {
+        
+        annotationDataFrame$id[i] <- ""
         
       }
       
@@ -195,7 +226,7 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Order by category and maf to see common markers in front
   
-  if (!is.na(maf)) {
+  if (!is.na(x.maf)) {
     manhattanData <- manhattanData[order(manhattanData$maf), ]
   }
   if (length(y) > 1 || !is.na(y)) {
@@ -216,14 +247,16 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   # Add line for every best hit
   
   if (length(z) > 1 || !is.na(z)) {
+    
     manhattanPlot <- manhattanPlot + geom_vline(aes(xintercept = bestHitsDataFrame$x), col = "black", linetype = "dotted")
+    
   }
   
   
   # Plot all markers
   
-  if (!is.na(typed)) {
-    if (!is.na(maf)) {
+  if (!is.na(x.typed)) {
+    if (!is.na(x.maf)) {
       if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, size = typed, col = category), shape = 21)
       } else {
@@ -238,7 +271,7 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
     }
     manhattanPlot <- manhattanPlot + scale_size_manual(name = "", values = c(2, 1))
   } else {
-    if (!is.na(maf)) {
+    if (!is.na(x.maf)) {
       if (length(y) > 1 || !is.na(y)) {
         manhattanPlot <- manhattanPlot + geom_point(data = manhattanData, aes(x = xValues, y = logP, fill = maf, col = category), shape = 21)
       } else {
@@ -252,24 +285,24 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
       }
     }
   }
-  if (!is.na(maf)) {
+  if (!is.na(x.maf)) {
     
-    manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "MAF", colors = c("white", mafColor))
+    manhattanPlot <- manhattanPlot + scale_fill_gradientn(name = "MAF", colors = c("white", x.color))
     
   }
   if (length(y) > 1 || !is.na(y)) {
     
     categoryColorsTemp <- levels(manhattanData$category)
     
-    if (length(categoryColors) > 1 || !is.na(categoryColors)) {
+    if (length(y.colors) > 1 || !is.na(y.colors)) {
       
       if ("" %in% categoryColorsTemp) {
         
-        categoryColorsTemp <- c("black", categoryColors)
+        categoryColorsTemp <- c("black", y.colors)
         
       } else {
         
-        categoryColorsTemp <- categoryColors
+        categoryColorsTemp <- y.colors
         
       }
       
@@ -316,7 +349,7 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Set axes labels 
   
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yMax, limits = c(0, yMax), expand = c(0, 0))
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yPMax, limits = c(0, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
@@ -331,14 +364,28 @@ manhattan <- function(x, y = NA, z = NA, snp='SNP', chr='CHR', bp='BP', p='P', m
   
   # Add annotation if provided
   
-  if (!is.na(annotation)) {
+  if (!is.na(x.annotation)) {
     
-    manhattanData$annotation[is.na(manhattanData$annotation)] <- ""
+    tempDataFrame <- manhattanData[!is.na(manhattanData$annotation) | manhattanData$logP > quantile(manhattanData$logP, 0.9), ]
     
-    nudge_p <- yMax - manhattanData$logP - 0.5
+    tempDataFrame$annotation[is.na(tempDataFrame$annotation)] <- ""
     
-    manhattanPlot <- manhattanPlot + geom_text_repel(data = manhattanData, aes(x = xValues, y = logP, label=annotation), nudge_y = nudge_p)
+    nudge_p <- yMax - tempDataFrame$logP - 0.5
+    
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = tempDataFrame, aes(x = xValues, y = logP, label=annotation), nudge_y = nudge_p)
   
+  }
+  
+  if ((length(y) > 1 || !is.na(y)) && !is.na(y.name)) {
+    
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = annotationDataFrame, aes(x = annotationX, y = annotationP, label=id), nudge_y = 1)
+    
+  }
+      
+  if ((length(z) > 1 || !is.na(z)) && !is.na(z.name)) {
+    
+    manhattanPlot <- manhattanPlot + geom_text_repel(data = bestHitsDataFrame, aes(x = x, y = yAnnotation, label = id), nudge_y = 0, point.padding = NA)
+    
   }
   
   # Add title to plot if provided

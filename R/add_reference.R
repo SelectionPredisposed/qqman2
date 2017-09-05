@@ -22,7 +22,7 @@
 #devtools::use_package("gtable", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-add_reference <- function(mhGrob, y, z, snp='SNP', chr='CHR', bp='BP', name = "name", categories, categoryColors = NA, 
+add_reference <- function(mhGrob, y, z, snp='SNP', chr='CHR', bp='BP', categories, categoryColors = NA, 
                           flanking = 3, build = 'b37') {
   
   
