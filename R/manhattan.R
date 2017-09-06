@@ -42,7 +42,7 @@
 
 manhattan <- function(x, y = NA, z = NA, 
                       x.snp='SNP', x.chr='CHR', x.bp='BP', x.p='P', x.maf = NA, x.typed = NA, x.annotation = NA, x.color = "black", 
-                      y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = "name", y.colors = NA, y.flanking = 50, y.minP = 5, 
+                      y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                       z.chr='CHR', z.bp='BP', z.name = "name", 
                       thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", build = 'b37', title = Sys.time()){
   
@@ -205,7 +205,7 @@ manhattan <- function(x, y = NA, z = NA,
           windowData <- manhattanData[snpInWindow, ]
           
           maxP <- max(windowData$logP)
-          j <- round(median(which(test == 3)))
+          j <- round(median(which(windowData$logP == maxP)))
           annotationDataFrame$annotationX[i] <- windowData$xValues[j]
           annotationDataFrame$annotationP[i] <- maxP
           
