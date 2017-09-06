@@ -125,7 +125,7 @@ manhattan <- function(x, y = NA, z = NA,
   manhattanData <- manhattanData[order(manhattanData$chr, manhattanData$bp), ]
   
   yMax <- max(round(max(manhattanData$logP)+1), thresholdHigh)
-    yPMax <- yMax
+  yPMax <- yMax
   
   if (length(z) > 1 || !is.na(z)) {
     
@@ -378,11 +378,29 @@ manhattan <- function(x, y = NA, z = NA,
   
   if ((length(y) > 1 || !is.na(y)) && !is.na(y.name)) {
     
+    if (sum(is.na(annotationDataFrame.annotationX)) > 0) {
+      
+      stop("Null in y genomic coordinates mapping.")
+      
+    }
+    
+    if (sum(is.na(annotationDataFrame.annotationP)) > 0) {
+      
+      stop("Null in y best P.")
+      
+    }
+    
     manhattanPlot <- manhattanPlot + geom_text_repel(data = annotationDataFrame, aes(x = annotationX, y = annotationP, label=id), nudge_y = 1)
     
   }
       
   if ((length(z) > 1 || !is.na(z)) && !is.na(z.name)) {
+    
+    if (sum(is.na(bestHitsDataFrame.x)) > 0) {
+      
+      stop("Null in z genomic coordinates mapping.")
+      
+    }
     
     manhattanPlot <- manhattanPlot + geom_text_repel(data = bestHitsDataFrame, aes(x = x, y = yAnnotation, label = id), nudge_y = 0, point.padding = NA)
     

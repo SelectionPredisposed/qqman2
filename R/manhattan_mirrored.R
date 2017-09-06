@@ -42,9 +42,9 @@
 #devtools::use_package("ggplot2", "Suggests")
 #devtools::use_package("ggrepel", "Suggests")
 
-manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA, 
+manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA, 
                                x.snp='SNP', x.chr='CHR', x.bp='BP', x.p='P', x.maf = NA, x.typed = NA, x.annotation = NA, x.color = "black", 
-                               y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = "name", y.colors = NA, y.flanking = 50, y.minP = 5, 
+                               y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                                z.chr='CHR', z.bp='BP', z.name = "name",  
                       thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", build = 'b37', title = Sys.time()){
   
@@ -66,10 +66,10 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   # Make a data frame for the plot
   
   manhattanData1 <- data.frame(snp = x1[[x.snp]], chr = x1[[x.chr]], bp = x1[[x.bp]], p = x1[[x.p]], stringsAsFactors = F)
-  if (!is.na(maf)) {
+  if (!is.na(x.maf)) {
     manhattanData1$maf <- x1[[x.maf]]
   }
-  if (!is.na(typed)) {
+  if (!is.na(x.typed)) {
     manhattanData1$typed <- x1[[x.typed]]
     if (!is.factor(manhattanData1$typed)) {
       manhattanData1$typed <- as.factor(manhattanData1$typed)
@@ -91,7 +91,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
       manhattanData2$typed <- as.factor(manhattanData2$typed)
     }
   }
-  if (!is.na(annotation)) {
+  if (!is.na(x.annotation)) {
     manhattanData2$annotation <- x2[[x.annotation]]
   }
   manhattanData2 <- manhattanData2[!is.na(manhattanData2$p) & manhattanData2$p > 0, ]
@@ -131,7 +131,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   }
   
   
-  # Mag chromosomic coordinates to the x axis
+  # Map chromosomic coordinates to the x axis
   
   xValues <- c() # The position of every SNP on the x axis
   xBreak <- c() # The center of every chromosome
@@ -147,7 +147,16 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   
   manhattanData <- manhattanData[order(manhattanData$chr, manhattanData$bp), ]
   
-  yMax <- max(round(max(abs(manhattanData$logP))+1), thresholdHigh)
+  yMax <- max(round(max(manhattanData$logP)+1), thresholdHigh)
+  yPMax <- yMax
+  
+  if (length(z) > 1 || !is.na(z)) {
+    
+    yAnnotation <- yMax +0.5
+    
+    yMax <- yMax + 1
+    
+  }
   
   xOffset <- 0
   start <- T
@@ -235,7 +244,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
             maxP <- -maxP
           }
           
-          j <- round(median(which(test == 3)))
+          j <- round(median(which(windowData$logP == maxP)))
           annotationDataFrame$annotationX[i] <- windowData$xValues[j]
           annotationDataFrame$annotationP[i] <- maxP
           
@@ -256,7 +265,7 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   
   # Order by category and maf to see common markers in front
   
-  if (!is.na(maf)) {
+  if (!is.na(x.maf)) {
     manhattanData <- manhattanData[order(manhattanData$maf), ]
   }
   if (length(y) > 1 || !is.na(y)) {
@@ -271,13 +280,15 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   
   # Add background rectangle for every second chromosome
   
-  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = chrStart, xmax = chrEnd, ymin = -yMax, ymax = yMax), alpha = 0.2)
+  manhattanPlot <- manhattanPlot + geom_rect(aes(xmin = chrStart, xmax = chrEnd, ymin = -yPMax, ymax = yMax), alpha = 0.2)
   
   
   # Add line for every best hit
   
   if (length(z) > 1 || !is.na(z)) {
+    
     manhattanPlot <- manhattanPlot + geom_vline(aes(xintercept = bestHitsDataFrame$x), col = "black", linetype = "dotted")
+    
   }
   
   
@@ -373,8 +384,8 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   
   # Set axes labels 
   
-  axisLabel <- paste(x2Name, " | ", x1Name, " [-log10(p)]")
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yMax:yMax, limits = c(-yMax, yMax), expand = c(0, 0))
+  axisLabel <- paste(x2.name, " | ", x1.name, " [-log10(p)]")
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yPMax:yPMax, limits = c(-yPMax, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
@@ -403,11 +414,41 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   
   if ((length(y) > 1 || !is.na(y)) && !is.na(y.name)) {
     
+    if (sum(is.na(annotationDataFrame$annotationX)) > 0) {
+      
+      stop("Null in y genomic coordinates mapping.")
+      
+    }
+    
+    if (sum(is.na(annotationDataFrame$annotationP)) > 0) {
+      
+      stop("Null in y best P.")
+      
+    }
+    
     manhattanPlot <- manhattanPlot + geom_text_repel(data = annotationDataFrame, aes(x = annotationX, y = annotationP, label=id), nudge_y = 1)
     
   }
   
   if ((length(z) > 1 || !is.na(z)) && !is.na(z.name)) {
+    
+    if (sum(is.na(bestHitsDataFrame$x)) > 0) {
+      
+      stop("Null in z genomic coordinates mapping.")
+      
+    }
+    
+    if (sum(is.na(yAnnotation)) > 0) {
+      
+      stop("Null in z y value.")
+      
+    }
+    
+    if (sum(is.na(bestHitsDataFrame$id)) > 0) {
+      
+      stop("Null in z id value.")
+      
+    }
     
     manhattanPlot <- manhattanPlot + geom_text_repel(data = bestHitsDataFrame, aes(x = x, y = yAnnotation, label = id), nudge_y = 0, point.padding = NA)
     
@@ -416,7 +457,9 @@ manhattan_mirrored <- function(x1, x2, x1Name, x2Name, y = NA, z = NA,
   # Add title to plot if provided
   
   if (!is.na(title)) {
+    
     manhattanPlot <-manhattanPlot + ggtitle(title)
+    
   }
   
   # Return the plot
