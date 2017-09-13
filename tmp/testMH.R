@@ -1,5 +1,6 @@
 
 library(ggplot2)
+library(ggrepel)
 
 # Load data
 
@@ -42,15 +43,17 @@ bestHits <- data.frame(chromosome = c(1, 7, 16), position = c(65991203, 12786016
 
 # Trim to smaller data frame
 
-# annotatedIndexes <- which(associationData$rsid %in% birthTable$rsid | associationData$rsid %in% childhoodTable$rsid | associationData$rsid %in% adulthoodTable$rsid)
-# trimmedIndexes <- unique(c(annotatedIndexes, sample(1:nrow(associationData), 10000)))
+annotatedIndexes <- which(associationData$rsid %in% birthTable$rsid | associationData$rsid %in% childhoodTable$rsid | associationData$rsid %in% adulthoodTable$rsid)
+trimmedIndexes <- unique(c(annotatedIndexes, sample(1:nrow(associationData), 10000)))
 
-# associationDataSmall <- associationData[trimmedIndexes, ]
-# associationDataBackUp <- associationData
-# associationData <- associationDataSmall
+associationDataSmall <- associationData[trimmedIndexes, ]
+associationDataBackUp <- associationData
+associationData <- associationDataSmall
+
+associationData <- associationData[associationData$chromosome == 12, ]
 
 
-# Make MH
+# MH
 
 mhPlot <- manhattan(x = associationData, x.snp = "rsid", x.chr = "chromosome", x.bp = "position", x.p = "frequentist_add_pvalue", x.typed = "typed", 
                     y = annotationTableAdulthood, y.snp = "rsid", y.chr = "chromosome", y.bp = "position", y.category = "label", y.name = "LOCUS", y.colors = c("red"), 
@@ -66,6 +69,31 @@ mhPlot <- manhattan(x = associationData, x.snp = "rsid", x.chr = "chromosome", x
 
 png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_z.png", width = 800, height = 600)
 plot(mhPlot)
+dummy <- dev.off()
+
+
+# Mirrored MH
+
+associationDataRandom <- associationData
+expectedP <- ppoints(n = nrow(associationDataRandom))
+associationDataRandom$frequentist_add_pvalue <- sample(expectedP, length(expectedP))
+
+mhMirroredPlot <- manhattan_mirrored(x1 = associationData, x2 = associationDataRandom, x1.name = "Observed", x2.name = "Expected", 
+                            x.snp = "rsid", x.chr = "chromosome", x.bp = "position", x.p = "frequentist_add_pvalue", x.typed = "typed", 
+                    y = annotationTableAdulthood, y.snp = "rsid", y.chr = "chromosome", y.bp = "position", y.category = "label", y.name = "LOCUS", y.colors = c("red"), 
+                    z = NA)
+
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_mirrored_y.png", width = 800, height = 600)
+plot(mhMirroredPlot)
+dummy <- dev.off()
+
+mhMirroredPlot <- manhattan_mirrored(x1 = associationData, x2 = associationDataRandom, x1.name = "Observed", x2.name = "Expected", 
+                                     x.snp = "rsid", x.chr = "chromosome", x.bp = "position", x.p = "frequentist_add_pvalue", x.typed = "typed", 
+                                     y = annotationTableAdulthood, y.snp = "rsid", y.chr = "chromosome", y.bp = "position", y.category = "label", y.colors = c("red"), 
+                                     z = bestHits, z.chr = "chromosome", z.bp = "position", z.name = "name")
+
+png("C:\\Github\\qqman2\\tmp\\mh_11_adulthood_mirrored_z.png", width = 800, height = 600)
+plot(mhMirroredPlot)
 dummy <- dev.off()
 
 

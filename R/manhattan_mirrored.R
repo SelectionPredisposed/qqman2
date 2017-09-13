@@ -29,6 +29,7 @@
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
+#' @param xTrim if true front and tale chromosomes with no values will be removed
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
 #' @param title Title of plot (date by default, ignored if NA)
 #' 
@@ -46,7 +47,8 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
                                x.snp='SNP', x.chr='CHR', x.bp='BP', x.p='P', x.maf = NA, x.typed = NA, x.annotation = NA, x.color = "black", 
                                y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                                z.chr='CHR', z.bp='BP', z.name = "name",  
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", build = 'b37', title = Sys.time()){
+                               thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", 
+                               xTrim = T, build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -160,10 +162,19 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
   
   xOffset <- 0
   start <- T
+  xMin <- -1
+  xMax <- -1
   
   for (chromosomeNumber in 1:22) {
     
     bpTemp <- manhattanData$bp[manhattanData$chr == chromosomeNumber]
+    
+    if (length(bpTemp) > 0) {
+      
+      if (xMin == -1) {
+        xMin <- xOffset
+      }
+      
     xTemp <- bpTemp + xOffset
     breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
     xBreak <- c(xBreak, breakValue)
@@ -196,8 +207,13 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
       bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
       
     }
+    }
     
     xOffset <- xOffset + chromosomeLength[chromosomeNumber]
+    
+    if (length(bpTemp) > 0) {
+      xMax <- xOffset
+    }
     
     if (start) {
       
@@ -259,6 +275,15 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
     }
     
     manhattanData$category <- factor(manhattanData$category)
+    
+  }
+  
+  
+  # remove annotation not found
+  
+  if (length(y) > 1 || !is.na(y)) {
+    
+    annotationDataFrame <- annotationDataFrame[annotationDataFrame$annotationX > 0, ]
     
   }
   
@@ -382,10 +407,11 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
   manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = -thresholdHigh), col = thresholdHighColor)
   
   
-  # Set axes labels 
+  # Set axes labels and limits
   
   axisLabel <- paste(x2.name, " | ", x1.name, " [-log10(p)]")
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yPMax:yPMax, limits = c(-yPMax, yMax), expand = c(0, 0))
+  yPMaxFloored <- floor(yPMax)
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = axisLabel, breaks = -yPMaxFloored:yPMaxFloored, limits = c(-yPMax, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
@@ -452,6 +478,12 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
     
     manhattanPlot <- manhattanPlot + geom_text_repel(data = bestHitsDataFrame, aes(x = x, y = yAnnotation, label = id), nudge_y = 0, point.padding = NA)
     
+  }
+  
+  # remove missing chromosomes at the beginning and at the end
+  
+  if (xTrim) {
+    manhattanPlot <- manhattanPlot + coord_cartesian(xlim = c(xMin, xMax))
   }
   
   # Add title to plot if provided

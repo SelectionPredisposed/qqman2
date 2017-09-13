@@ -26,6 +26,7 @@
 #' @param thresholdHigh the high threshold value (log10)
 #' @param thresholdLowColor the color of the low threshold
 #' @param thresholdHighColor the color of the high threshold
+#' @param xTrim if true front and tale chromosomes with no values will be removed
 #' @param mafColor the color of the low maf values
 #' @param build What build to use for plotting ('b37' or 'b38', default is 'b37')
 #' @param title Title of plot (date by default, ignored if NA)
@@ -44,7 +45,8 @@ manhattan <- function(x, y = NA, z = NA,
                       x.snp='SNP', x.chr='CHR', x.bp='BP', x.p='P', x.maf = NA, x.typed = NA, x.annotation = NA, x.color = "black", 
                       y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                       z.chr='CHR', z.bp='BP', z.name = "name", 
-                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", build = 'b37', title = Sys.time()){
+                      thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red",
+                      xTrim = T, build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -137,36 +139,50 @@ manhattan <- function(x, y = NA, z = NA,
   
   xOffset <- 0
   start <- T
+  xMin <- -1
+  xMax <- -1
   for (chromosomeNumber in 1:22) {
     
     bpTemp <- manhattanData$bp[manhattanData$chr == chromosomeNumber]
-    xTemp <- bpTemp + xOffset
-    breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
-    xBreak <- c(xBreak, breakValue)
-    if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
-      xBreakLabels <- c(xBreakLabels, chromosomeNumber)
-    } else {
-      xBreakLabels <- c(xBreakLabels, "")
-    }
-    xValues <- c(xValues, xTemp)
     
-    if (length(y) > 1 || !is.na(y)) {
+    if (length(bpTemp) > 0) {
       
-      bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
+      if (xMin == -1) {
+        xMin <- xOffset
+      }
+      
       xTemp <- bpTemp + xOffset
-      startTemp <- xTemp - y.flanking * 1000
-      annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
-      endTemp <- xTemp + y.flanking * 1000
-      annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
-    
+      breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
+      xBreak <- c(xBreak, breakValue)
+      if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
+        xBreakLabels <- c(xBreakLabels, chromosomeNumber)
+      } else {
+        xBreakLabels <- c(xBreakLabels, "")
+      }
+      xValues <- c(xValues, xTemp)
+      
+      if (length(y) > 1 || !is.na(y)) {
+        
+        bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
+        xTemp <- bpTemp + xOffset
+        startTemp <- xTemp - y.flanking * 1000
+        annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
+        endTemp <- xTemp + y.flanking * 1000
+        annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
+        
+      }
+      
+      if (length(z) > 1 || !is.na(z)) {
+        bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
+      }
     }
-    
-    if (length(z) > 1 || !is.na(z)) {
-      bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
-    }
-    
     
     xOffset <- xOffset + chromosomeLength[chromosomeNumber]
+    
+    if (length(bpTemp) > 0) {
+      xMax <- xOffset
+    }
+    
     if (start) {
       chrStart <- c(chrStart, xOffset)
     } else {
@@ -220,6 +236,15 @@ manhattan <- function(x, y = NA, z = NA,
     }
     
     manhattanData$category <- factor(manhattanData$category)
+    
+  }
+  
+  
+  # remove annotation not found
+  
+  if (length(y) > 1 || !is.na(y)) {
+    
+    annotationDataFrame <- annotationDataFrame[annotationDataFrame$annotationX > 0, ]
     
   }
   
@@ -347,9 +372,10 @@ manhattan <- function(x, y = NA, z = NA,
   manhattanPlot <- manhattanPlot + geom_hline(aes(yintercept = thresholdHigh), col = thresholdHighColor)
   
   
-  # Set axes labels 
+  # Set axes labels and limits
   
-  manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yPMax, limits = c(0, yMax), expand = c(0, 0))
+  yPMaxFloored <- floor(yPMax)
+  manhattanPlot <- manhattanPlot + scale_y_continuous(name = "-log10(p)", breaks = 0:yPMaxFloored, limits = c(0, yMax), expand = c(0, 0))
   manhattanPlot <- manhattanPlot + scale_x_continuous(name = NULL, breaks = xBreak, label = xBreakLabels, expand = c(0.01, 0), limits = c(0, genomeLength))
   
   
@@ -378,13 +404,13 @@ manhattan <- function(x, y = NA, z = NA,
   
   if ((length(y) > 1 || !is.na(y)) && !is.na(y.name)) {
     
-    if (sum(is.na(annotationDataFrame.annotationX)) > 0) {
+    if (sum(is.na(annotationDataFrame$annotationX)) > 0) {
       
       stop("Null in y genomic coordinates mapping.")
       
     }
     
-    if (sum(is.na(annotationDataFrame.annotationP)) > 0) {
+    if (sum(is.na(annotationDataFrame$annotationP)) > 0) {
       
       stop("Null in y best P.")
       
@@ -404,6 +430,12 @@ manhattan <- function(x, y = NA, z = NA,
     
     manhattanPlot <- manhattanPlot + geom_text_repel(data = bestHitsDataFrame, aes(x = x, y = yAnnotation, label = id), nudge_y = 0, point.padding = NA)
     
+  }
+  
+  # remove missing chromosomes at the beginning and at the end
+  
+  if (xTrim) {
+    manhattanPlot <- manhattanPlot + coord_cartesian(xlim = c(xMin, xMax))
   }
   
   # Add title to plot if provided
