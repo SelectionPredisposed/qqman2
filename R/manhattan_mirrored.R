@@ -48,7 +48,7 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
                                y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                                z.chr='CHR', z.bp='BP', z.name = "name",  
                                thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red", 
-                               xTrim = T, build = 'b37', title = Sys.time()){
+                               xTrim = F, build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -167,6 +167,8 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
   
   for (chromosomeNumber in 1:22) {
     
+    tempLength <- chromosomeLength[chromosomeNumber]
+    
     bpTemp <- manhattanData$bp[manhattanData$chr == chromosomeNumber]
     
     if (length(bpTemp) > 0) {
@@ -174,42 +176,40 @@ manhattan_mirrored <- function(x1, x2, x1.name, x2.name, y = NA, z = NA,
       if (xMin == -1) {
         xMin <- xOffset
       }
+      xMax <- xOffset + tempLength
       
-    xTemp <- bpTemp + xOffset
-    breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
-    xBreak <- c(xBreak, breakValue)
-    
-    if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
-      
-      xBreakLabels <- c(xBreakLabels, chromosomeNumber)
-      
-    } else {
-      
-      xBreakLabels <- c(xBreakLabels, "")
-      
-    }
-    
-    xValues <- c(xValues, xTemp)
-    
-    if (length(y) > 1 || !is.na(y)) {
-      
-      bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
       xTemp <- bpTemp + xOffset
-      startTemp <- xTemp - y.flanking * 1000
-      annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
-      endTemp <- xTemp + y.flanking * 1000
-      annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
+      xValues <- c(xValues, xTemp)
       
+      if (length(y) > 1 || !is.na(y)) {
+        
+        bpTemp <- annotationDataFrame$bp[annotationDataFrame$chr == chromosomeNumber]
+        xTemp <- bpTemp + xOffset
+        startTemp <- xTemp - y.flanking * 1000
+        annotationDataFrame$xStart[annotationDataFrame$chr == chromosomeNumber] <- ifelse(startTemp < 0, 0, startTemp)
+        endTemp <- xTemp + y.flanking * 1000
+        annotationDataFrame$xEnd[annotationDataFrame$chr == chromosomeNumber] <- ifelse(endTemp > genomeLength, genomeLength, endTemp)
+        
+      }
+      
+      if (length(z) > 1 || !is.na(z)) {
+        
+        bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
+        
+      }
     }
     
-    if (length(z) > 1 || !is.na(z)) {
-      
-      bestHitsDataFrame$x[bestHitsDataFrame$chr == chromosomeNumber] <- bestHitsDataFrame$bp[bestHitsDataFrame$chr == chromosomeNumber] + xOffset
-      
-    }
+    if (length(bpTemp) > 0 || xMin != -1) {
+      breakValue <- xOffset + tempLength / 2
+      xBreak <- c(xBreak, breakValue)
+      if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
+        xBreakLabels <- c(xBreakLabels, chromosomeNumber)
+      } else {
+        xBreakLabels <- c(xBreakLabels, "")
+      }
     }
     
-    xOffset <- xOffset + chromosomeLength[chromosomeNumber]
+    xOffset <- xOffset + tempLength
     
     if (length(bpTemp) > 0) {
       xMax <- xOffset

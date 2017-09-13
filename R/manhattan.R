@@ -46,7 +46,7 @@ manhattan <- function(x, y = NA, z = NA,
                       y.snp='SNP', y.chr='CHR', y.bp='BP', y.category = "category", y.name = NA, y.colors = NA, y.flanking = 50, y.minP = 5, 
                       z.chr='CHR', z.bp='BP', z.name = "name", 
                       thresholdLow = 5, thresholdHigh = -log10(5e-8), thresholdLowColor = "blue", thresholdHighColor = "red",
-                      xTrim = T, build = 'b37', title = Sys.time()){
+                      xTrim = F, build = 'b37', title = Sys.time()){
   
   
   # Build specific variables
@@ -143,6 +143,8 @@ manhattan <- function(x, y = NA, z = NA,
   xMax <- -1
   for (chromosomeNumber in 1:22) {
     
+    tempLength <- chromosomeLength[chromosomeNumber]
+    
     bpTemp <- manhattanData$bp[manhattanData$chr == chromosomeNumber]
     
     if (length(bpTemp) > 0) {
@@ -150,15 +152,9 @@ manhattan <- function(x, y = NA, z = NA,
       if (xMin == -1) {
         xMin <- xOffset
       }
+      xMax <- xOffset + tempLength
       
       xTemp <- bpTemp + xOffset
-      breakValue <- xTemp[1] + (xTemp[length(xTemp)] - xTemp[1]) / 2
-      xBreak <- c(xBreak, breakValue)
-      if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
-        xBreakLabels <- c(xBreakLabels, chromosomeNumber)
-      } else {
-        xBreakLabels <- c(xBreakLabels, "")
-      }
       xValues <- c(xValues, xTemp)
       
       if (length(y) > 1 || !is.na(y)) {
@@ -177,11 +173,17 @@ manhattan <- function(x, y = NA, z = NA,
       }
     }
     
-    xOffset <- xOffset + chromosomeLength[chromosomeNumber]
-    
-    if (length(bpTemp) > 0) {
-      xMax <- xOffset
+    if (length(bpTemp) > 0 || xMin != -1) {
+      breakValue <- xOffset + tempLength / 2
+      xBreak <- c(xBreak, breakValue)
+      if (chromosomeNumber < 12 || chromosomeNumber %% 2 == 0) {
+        xBreakLabels <- c(xBreakLabels, chromosomeNumber)
+      } else {
+        xBreakLabels <- c(xBreakLabels, "")
+      }
     }
+    
+    xOffset <- xOffset + tempLength
     
     if (start) {
       chrStart <- c(chrStart, xOffset)
